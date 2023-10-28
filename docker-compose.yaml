@@ -1,0 +1,71 @@
+version: '3'
+services:
+  mysql:
+    container_name: mysql
+    image: mysql:8
+    ports:
+      - "3306:3306"
+    volumes:
+      - /etc/localtime:/etc/localtime
+      - ./mysql-init:/docker-entrypoint-initdb.d # 启动脚本
+    #  - ./docker/software/mysql/conf/mysqld.cnf:/etc/mysql/mysql.conf.d/mysqld.cnf
+    environment:
+      LANG: C.UTF-8
+      MYSQL_ROOT_PASSWORD: root
+    restart: always
+    command: ['--character-set-server=utf8mb4', '--collation-server=utf8mb4_unicode_ci' ]
+
+
+  redis:
+    container_name: redis
+    image: redis
+    ports:
+      - "6379:6379"
+    command: [ "redis-server", "--requirepass", "123456" ]
+    restart: always
+
+  rmqnamesrv:
+    container_name: rmqnamesrv
+    image: foxiswho/rocketmq:server-4.5.1
+    ports:
+      - "9876:9876"
+    restart: always
+
+  rmqbroker:
+    container_name: rmqbroker
+    image: foxiswho/rocketmq:broker-4.5.1
+    ports:
+      - "10911:10911"
+      - "10909:10909"
+    volumes:
+      - ./docker/software/rocketmq/conf/broker.conf:/etc/rocketmq/broker.conf
+    environment:
+      NAMESRV_ADDR: "rmqnamesrv:9876"
+      JAVA_OPTS: "-Duser.home=/opt"
+      JAVA_OPT_EXT: "-server -Xms512m -Xmx512m"
+    command: mqbroker -c /etc/rocketmq/broker.conf
+    depends_on:
+      - rmqnamesrv
+    restart: always
+
+  rmqconsole:
+    container_name: rmqconsole
+    image: pangliang/rocketmq-console-ng
+    environment:
+      JAVA_OPTS: "-Drocketmq.config.namesrvAddr=rmqnamesrv:9876 -Drocketmq.config.isVIPChannel=false"
+    ports:
+      - "8088:8080"
+    restart: always
+    depends_on:
+      - rmqnamesrv
+
+  nacos2:
+    container_name: nacos2
+    image: nacos/nacos-server:v2.1.1
+    ports:
+      - "8848:8848"
+      - "9848:9848"
+    environment:
+      MODE: standalone
+      TIME_ZONE: 'Asia/Shanghai'
+    restart: always
