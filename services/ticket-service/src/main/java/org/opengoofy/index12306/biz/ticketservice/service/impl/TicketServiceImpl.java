@@ -49,23 +49,13 @@ import org.opengoofy.index12306.biz.ticketservice.dto.domain.PurchaseTicketPasse
 import org.opengoofy.index12306.biz.ticketservice.dto.domain.RouteDTO;
 import org.opengoofy.index12306.biz.ticketservice.dto.domain.SeatClassDTO;
 import org.opengoofy.index12306.biz.ticketservice.dto.domain.TicketListDTO;
-import org.opengoofy.index12306.biz.ticketservice.dto.req.CancelTicketOrderReqDTO;
-import org.opengoofy.index12306.biz.ticketservice.dto.req.PurchaseTicketReqDTO;
-import org.opengoofy.index12306.biz.ticketservice.dto.req.RefundTicketReqDTO;
-import org.opengoofy.index12306.biz.ticketservice.dto.req.TicketOrderItemQueryReqDTO;
-import org.opengoofy.index12306.biz.ticketservice.dto.req.TicketPageQueryReqDTO;
-import org.opengoofy.index12306.biz.ticketservice.dto.resp.RefundTicketRespDTO;
+import org.opengoofy.index12306.biz.ticketservice.dto.req.*;
+import org.opengoofy.index12306.biz.ticketservice.dto.resp.*;
 import org.opengoofy.index12306.biz.ticketservice.dto.resp.TicketOrderDetailRespDTO;
-import org.opengoofy.index12306.biz.ticketservice.dto.resp.TicketPageQueryRespDTO;
-import org.opengoofy.index12306.biz.ticketservice.dto.resp.TicketPurchaseRespDTO;
 import org.opengoofy.index12306.biz.ticketservice.remote.PayRemoteService;
 import org.opengoofy.index12306.biz.ticketservice.remote.TicketOrderRemoteService;
-import org.opengoofy.index12306.biz.ticketservice.remote.dto.PayInfoRespDTO;
-import org.opengoofy.index12306.biz.ticketservice.remote.dto.RefundReqDTO;
-import org.opengoofy.index12306.biz.ticketservice.remote.dto.RefundRespDTO;
-import org.opengoofy.index12306.biz.ticketservice.remote.dto.TicketOrderCreateRemoteReqDTO;
-import org.opengoofy.index12306.biz.ticketservice.remote.dto.TicketOrderItemCreateRemoteReqDTO;
-import org.opengoofy.index12306.biz.ticketservice.remote.dto.TicketOrderPassengerDetailRespDTO;
+import org.opengoofy.index12306.biz.ticketservice.remote.UserRemoteService;
+import org.opengoofy.index12306.biz.ticketservice.remote.dto.*;
 import org.opengoofy.index12306.biz.ticketservice.service.SeatService;
 import org.opengoofy.index12306.biz.ticketservice.service.TicketService;
 import org.opengoofy.index12306.biz.ticketservice.service.TrainStationService;
@@ -92,6 +82,7 @@ import org.springframework.data.redis.core.RedisCallback;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.bind.annotation.RequestBody;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
@@ -135,6 +126,7 @@ public class TicketServiceImpl extends ServiceImpl<TicketMapper, TicketDO> imple
     private final TrainStationPriceMapper trainStationPriceMapper;
     private final DistributedCache distributedCache;
     private final TicketOrderRemoteService ticketOrderRemoteService;
+    private final UserRemoteService userRemoteService;
     private final PayRemoteService payRemoteService;
     private final StationMapper stationMapper;
     private final SeatService seatService;
@@ -498,6 +490,53 @@ public class TicketServiceImpl extends ServiceImpl<TicketMapper, TicketDO> imple
     @Override
     public PayInfoRespDTO getPayInfo(String orderSn) {
         return payRemoteService.getPayInfo(orderSn).getData();
+    }
+
+    @Override
+    public ExchangeTicketRespDTO exchangeTickets(@RequestBody ExchangeTicketReqDTO requestParam) {
+        // 责任链模式  1. 参数必填 2. 是否符合改签条件(订单状态，车次是否已开)
+
+        // 1. 创建新订单，进行改签
+        Result<UserQueryActualRespDTO> userActualResp = userRemoteService.queryActualUserByUsername(UserContext.getUsername());
+        Result<List<PassengerRespDTO>> passengers = userRemoteService.listPassengerQueryByUsername();
+        List<PurchaseTicketPassengerDetailDTO> purchaseTicketPassengerDetailDTOS = passengers.getData().stream().filter();
+
+        purchaseTicketPassengerDetailDTOS.add(new PurchaseTicketPassengerDetailDTO(
+
+        ));
+        boolean tokenResult = ticketAvailabilityTokenBucket.takeTokenFromBucketWithExchange(requestParam);
+        if (!tokenResult) {
+            throw new ServiceException("列车站点已无余票，无法改票");
+        }
+        String lockKey = environment.resolvePlaceholders(String.format(LOCK_PURCHASE_TICKETS_V2, requestParam.getTrainId(), requestParam.getSeatType()));
+        ReentrantLock localLock = localLockMap.getIfPresent(lockKey);
+        if (localLock == null) {
+            synchronized (TicketService.class) {
+                if ((localLock = localLockMap.getIfPresent(lockKey)) == null) {
+                    localLock = new ReentrantLock(true);
+                    localLockMap.put(lockKey, localLock);
+                }
+            }
+        }
+        RLock distributedLock = redissonClient.getFairLock(lockKey);
+        try {
+            localLock.lock();
+            distributedLock.lock();
+            ticketService.executeExchangeTickets(requestParam);
+
+        } finally {
+            localLock.unlock();
+            distributedLock.unlock();
+        }
+        // 2. 购票成功后通过mq通知order修改状态
+
+        return null;
+    }
+
+    @Override
+    @Transactional(rollbackFor = Throwable.class)
+    public boolean executeExchangeTickets(ExchangeTicketReqDTO requestParam) {
+
     }
 
     @Override

@@ -15,32 +15,75 @@
  * limitations under the License.
  */
 
-package org.opengoofy.index12306.biz.ticketservice.common.enums;
+package org.opengoofy.index12306.biz.ticketservice.remote.dto;
+
+import lombok.Data;
 
 /**
- * 购票相关责任链 Mark 枚举
+ * 用户查询返回无脱敏参数
  *
  * @公众号：马丁玩编程，回复：加群，添加马哥微信（备注：12306）获取项目资料
  */
-public enum TicketChainMarkEnum {
+@Data
+public class UserQueryActualRespDTO {
 
     /**
-     * 车票查询过滤器
+     * 用户名
      */
-    TRAIN_QUERY_FILTER,
+    private String username;
 
     /**
-     * 车票购买过滤器
+     * 真实姓名
      */
-    TRAIN_PURCHASE_TICKET_FILTER,
+    private String realName;
 
     /**
-     * 车票退款过滤器
+     * 国家/地区
      */
-    TRAIN_REFUND_TICKET_FILTER,
+    private String region;
 
     /**
-     * 改签过滤器
+     * 证件类型
      */
-    TRAIN_EXCHANGE_TICKET_FILTER
+    private Integer idType;
+
+    /**
+     * 证件号
+     */
+    private String idCard;
+
+    /**
+     * 手机号
+     */
+    private String phone;
+
+    /**
+     * 固定电话
+     */
+    private String telephone;
+
+    /**
+     * 邮箱
+     */
+    private String mail;
+
+    /**
+     * 旅客类型
+     */
+    private Integer userType;
+
+    /**
+     * 审核状态
+     */
+    private Integer verifyStatus;
+
+    /**
+     * 邮编
+     */
+    private String postCode;
+
+    /**
+     * 地址
+     */
+    private String address;
 }

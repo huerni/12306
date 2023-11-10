@@ -1,4 +1,11 @@
 version: '3'
+
+networks:
+  12306_default:
+    ipam:
+      config:
+        - subnet: 172.18.0.0/16
+
 services:
   mysql:
     container_name: mysql
@@ -14,6 +21,9 @@ services:
       MYSQL_ROOT_PASSWORD: root
     restart: always
     command: ['--character-set-server=utf8mb4', '--collation-server=utf8mb4_unicode_ci' ]
+    networks:
+      12306_default:
+        ipv4_address: 172.18.0.7
 
 
   redis:
@@ -23,6 +33,9 @@ services:
       - "6379:6379"
     command: [ "redis-server", "--requirepass", "123456" ]
     restart: always
+    networks:
+      12306_default:
+        ipv4_address: 172.18.0.2
 
   rmqnamesrv:
     container_name: rmqnamesrv
@@ -30,6 +43,9 @@ services:
     ports:
       - "9876:9876"
     restart: always
+    networks:
+      12306_default:
+        ipv4_address: 172.18.0.3
 
   rmqbroker:
     container_name: rmqbroker
@@ -47,6 +63,9 @@ services:
     depends_on:
       - rmqnamesrv
     restart: always
+    networks:
+      12306_default:
+        ipv4_address: 172.18.0.4
 
   rmqconsole:
     container_name: rmqconsole
@@ -58,6 +77,9 @@ services:
     restart: always
     depends_on:
       - rmqnamesrv
+    networks:
+      12306_default:
+        ipv4_address: 172.18.0.5
 
   nacos2:
     container_name: nacos2
@@ -69,3 +91,6 @@ services:
       MODE: standalone
       TIME_ZONE: 'Asia/Shanghai'
     restart: always
+    networks:
+      12306_default:
+        ipv4_address: 172.18.0.6

@@ -37,6 +37,11 @@ import java.util.Date;
 public class TicketOrderDetailSelfRespDTO {
 
     /**
+     * 所属订单号
+     */
+    private String OrderSn;
+
+    /**
      * 出发站点
      */
     private String departure;
