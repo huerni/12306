@@ -96,6 +96,14 @@ const routes = [
     icon: 'icon-goumai',
     meta: { requiresAuth: true }
   },
+  // {
+  //   label: '改签',
+  //   path: '/exchangeTicket',
+  //   name: 'exchangeTicket',
+  //   component: ExchangeTicket,
+  //   icon: 'icon-goumai',
+  //   meta: { requiresAuth: true }
+  // },
   {
     label: '支付宝支付',
     path: '/aliPay',

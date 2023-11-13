@@ -18,10 +18,8 @@
 package org.opengoofy.index12306.biz.orderservice.service;
 
 import org.opengoofy.index12306.biz.orderservice.dto.domain.OrderStatusReversalDTO;
-import org.opengoofy.index12306.biz.orderservice.dto.req.CancelTicketOrderReqDTO;
-import org.opengoofy.index12306.biz.orderservice.dto.req.TicketOrderCreateReqDTO;
-import org.opengoofy.index12306.biz.orderservice.dto.req.TicketOrderPageQueryReqDTO;
-import org.opengoofy.index12306.biz.orderservice.dto.req.TicketOrderSelfPageQueryReqDTO;
+import org.opengoofy.index12306.biz.orderservice.dto.domain.TicketOrderExchangeDTO;
+import org.opengoofy.index12306.biz.orderservice.dto.req.*;
 import org.opengoofy.index12306.biz.orderservice.dto.resp.TicketOrderDetailRespDTO;
 import org.opengoofy.index12306.biz.orderservice.dto.resp.TicketOrderDetailSelfRespDTO;
 import org.opengoofy.index12306.biz.orderservice.mq.event.PayResultCallbackOrderEvent;
@@ -57,6 +55,8 @@ public interface OrderService {
      * @return 订单号
      */
     String createTicketOrder(TicketOrderCreateReqDTO requestParam);
+
+    boolean exchangeTicketOrder(TicketOrderExchangeDTO requestParam);
 
     /**
      * 关闭火车票订单

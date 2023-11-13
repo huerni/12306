@@ -184,13 +184,19 @@ public final class TicketAvailabilityTokenBucket {
             return redisScript;
         });
         Assert.notNull(actual);
+        Map<Integer, Long> seatTypeCountMap = requestParam.getPassengers().stream()
+                .collect(Collectors.groupingBy(PurchaseTicketPassengerDetailDTO::getSeatType, Collectors.counting()));
+        JSONArray seatTypeCountArray = seatTypeCountMap.entrySet().stream()
+                .map(entry -> {
+                    JSONObject jsonObject = new JSONObject();
+                    jsonObject.put("seatType", String.valueOf(entry.getKey()));
+                    jsonObject.put("count", String.valueOf(entry.getValue()));
+                    return jsonObject;
+                })
+                .collect(Collectors.toCollection(JSONArray::new));
         List<RouteDTO> takeoutRouteDTOList = trainStationService
                 .listTakeoutTrainStationRoute(requestParam.getTrainId(), requestParam.getDeparture(), requestParam.getArrival());
         String luaScriptKey = StrUtil.join("_", requestParam.getDeparture(), requestParam.getArrival());
-        JSONObject jsonObject = new JSONObject();
-        jsonObject.put("seatType", String.valueOf(requestParam.getSeatType()));
-        jsonObject.put("count", String.valueOf(1));
-        JSONArray seatTypeCountArray = new JSONArray(jsonObject);
         Long result = stringRedisTemplate.execute(actual, Lists.newArrayList(actualHashKey, luaScriptKey), JSON.toJSONString(seatTypeCountArray), JSON.toJSONString(takeoutRouteDTOList));
         return result != null && Objects.equals(result, 0L);
     }

@@ -60,7 +60,7 @@
               <Button disabled>非现金支付</Button>
             </space>
             <Space>
-              <Button disabled>改签</Button>
+              <Button>改签</Button>
               <Button disabled>变更车站</Button>
               <Button disabled>餐饮·特产</Button>
               <Button disabled>打印信息单</Button>

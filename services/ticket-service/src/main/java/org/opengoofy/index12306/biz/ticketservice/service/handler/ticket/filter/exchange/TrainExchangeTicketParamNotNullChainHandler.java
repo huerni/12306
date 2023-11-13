@@ -16,9 +16,9 @@ public class TrainExchangeTicketParamNotNullChainHandler implements TrainExchang
 
     @Override
     public void handler(ExchangeTicketReqDTO requestParam) {
-        if (StrUtil.isBlank(requestParam.getOldOrderSn())) {
-            throw new ClientException("订单号不能为空");
-        }
+//        if (StrUtil.isBlank(requestParam.getOldOrderSn())) {
+//            throw new ClientException("订单号不能为空");
+//        }
         if (StrUtil.isBlank(requestParam.getTrainId())) {
             throw new ClientException("列车标识不能为空");
         }
@@ -28,17 +28,17 @@ public class TrainExchangeTicketParamNotNullChainHandler implements TrainExchang
         if (StrUtil.isBlank(requestParam.getArrival())) {
             throw new ClientException("到达站点不能为空");
         }
-        if (CollUtil.isEmpty(requestParam.getPassengers())) {
-            throw new ClientException("乘车人至少选择一位");
-        }
-        for (PurchaseTicketPassengerDetailDTO each : requestParam.getPassengers()) {
-            if (StrUtil.isBlank(each.getPassengerId())) {
-                throw new ClientException("乘车人不能为空");
-            }
-            if (Objects.isNull(each.getSeatType())) {
-                throw new ClientException("座位类型不能为空");
-            }
-        }
+//        if (CollUtil.isEmpty(requestParam.getPassengers())) {
+//            throw new ClientException("乘车人至少选择一位");
+//        }
+//        for (PurchaseTicketPassengerDetailDTO each : requestParam.getPassengers()) {
+//            if (StrUtil.isBlank(each.getPassengerId())) {
+//                throw new ClientException("乘车人不能为空");
+//            }
+//            if (Objects.isNull(each.getSeatType())) {
+//                throw new ClientException("座位类型不能为空");
+//            }
+//        }
     }
 
     @Override

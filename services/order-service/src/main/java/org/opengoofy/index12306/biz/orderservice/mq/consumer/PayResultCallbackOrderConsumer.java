@@ -25,6 +25,8 @@ import org.opengoofy.index12306.biz.orderservice.common.constant.OrderRocketMQCo
 import org.opengoofy.index12306.biz.orderservice.common.enums.OrderItemStatusEnum;
 import org.opengoofy.index12306.biz.orderservice.common.enums.OrderStatusEnum;
 import org.opengoofy.index12306.biz.orderservice.dto.domain.OrderStatusReversalDTO;
+import org.opengoofy.index12306.biz.orderservice.dto.domain.TicketOrderExchangeDTO;
+import org.opengoofy.index12306.biz.orderservice.dto.resp.TicketOrderDetailRespDTO;
 import org.opengoofy.index12306.biz.orderservice.mq.domain.MessageWrapper;
 import org.opengoofy.index12306.biz.orderservice.mq.event.PayResultCallbackOrderEvent;
 import org.opengoofy.index12306.biz.orderservice.service.OrderService;
@@ -62,12 +64,30 @@ public class PayResultCallbackOrderConsumer implements RocketMQListener<MessageW
     @Override
     public void onMessage(MessageWrapper<PayResultCallbackOrderEvent> message) {
         PayResultCallbackOrderEvent payResultCallbackOrderEvent = message.getMessage();
-        OrderStatusReversalDTO orderStatusReversalDTO = OrderStatusReversalDTO.builder()
-                .orderSn(payResultCallbackOrderEvent.getOrderSn())
+        TicketOrderDetailRespDTO ticketOrderDetailRespDTO = orderService.queryTicketOrderByOrderSn(payResultCallbackOrderEvent.getOrderSn());
+        if(ticketOrderDetailRespDTO.getPreOrderSn() != null) {
+            TicketOrderExchangeDTO ticketOrderExchangeDTO = TicketOrderExchangeDTO.builder()
+                    .preOrderSn(ticketOrderDetailRespDTO.getPreOrderSn())
+                    .orderSn(payResultCallbackOrderEvent.getOrderSn())
+                    .build();
+            orderService.exchangeTicketOrder(ticketOrderExchangeDTO);
+
+            OrderStatusReversalDTO orderStatusReversalDTO = OrderStatusReversalDTO.builder()
+                    .orderSn(ticketOrderDetailRespDTO.getPreOrderSn())
+                    .orderStatus(OrderStatusEnum.CLOSED.getStatus())
+                    .orderItemStatus(OrderItemStatusEnum.CLOSED.getStatus())
+                    .build();
+            orderService.statusReversal(orderStatusReversalDTO);
+            orderService.payCallbackOrder(payResultCallbackOrderEvent);
+
+        }
+
+        OrderStatusReversalDTO preOrderStatusReversalDTO = OrderStatusReversalDTO.builder()
+                .orderSn(ticketOrderDetailRespDTO.getPreOrderSn())
                 .orderStatus(OrderStatusEnum.ALREADY_PAID.getStatus())
                 .orderItemStatus(OrderItemStatusEnum.ALREADY_PAID.getStatus())
                 .build();
-        orderService.statusReversal(orderStatusReversalDTO);
+        orderService.statusReversal(preOrderStatusReversalDTO);
         orderService.payCallbackOrder(payResultCallbackOrderEvent);
     }
 }

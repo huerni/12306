@@ -1,22 +1,17 @@
-package org.opengoofy.index12306.biz.ticketservice.dto.req;
+package org.opengoofy.index12306.biz.ticketservice.dto.domain;
 
 import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
-import org.opengoofy.index12306.biz.ticketservice.dto.domain.PurchaseTicketPassengerDetailDTO;
 
 import java.util.List;
 
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-public class ExchangeTicketReqDTO {
-
-    /**
-     * 订单 ID
-     */
-    private String orderSn;
-
+@Builder
+public class TicketSelectSeatDTO {
     /**
      * 车次 ID
      */

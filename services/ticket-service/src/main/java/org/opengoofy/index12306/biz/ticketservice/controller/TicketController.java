@@ -92,6 +92,11 @@ public class TicketController {
         return Results.success(ticketService.purchaseTicketsV2(requestParam));
     }
 
+    /**
+     * 车票改签
+     * @param requestParam
+     * @return
+     */
     @ILog
     @Idempotent(
             uniqueKeyPrefix = "index12306-ticket:lock_purchase-tickets:",

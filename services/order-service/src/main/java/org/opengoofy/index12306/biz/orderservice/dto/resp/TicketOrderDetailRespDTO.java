@@ -38,6 +38,11 @@ public class TicketOrderDetailRespDTO {
     private String orderSn;
 
     /**
+     * 原订单号号
+     */
+    private String preOrderSn;
+
+    /**
      * 列车 ID
      */
     private Long trainId;

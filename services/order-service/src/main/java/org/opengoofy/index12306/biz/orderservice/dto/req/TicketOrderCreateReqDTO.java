@@ -61,6 +61,11 @@ public class TicketOrderCreateReqDTO {
     private Integer source;
 
     /**
+     * 原订单号
+     */
+    private String preOrderSn;
+
+    /**
      * 下单时间
      */
     private Date orderTime;

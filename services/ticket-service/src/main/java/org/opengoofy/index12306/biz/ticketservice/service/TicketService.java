@@ -85,7 +85,12 @@ public interface TicketService extends IService<TicketDO> {
 
     ExchangeTicketRespDTO exchangeTickets(@RequestBody ExchangeTicketReqDTO requestParam);
 
-    boolean executeExchangeTickets(@RequestBody ExchangeTicketReqDTO requestParam);
+    /**
+     * 车票改签
+     * @param requestParam
+     * @return
+     */
+    ExchangeTicketRespDTO executeExchangeTickets(@RequestBody ExchangeTicketReqDTO requestParam);
 
     /**
      * 取消车票订单
