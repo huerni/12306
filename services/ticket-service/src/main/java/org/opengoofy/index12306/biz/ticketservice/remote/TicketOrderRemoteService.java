@@ -21,8 +21,10 @@ import org.opengoofy.index12306.biz.ticketservice.dto.req.CancelTicketOrderReqDT
 import org.opengoofy.index12306.biz.ticketservice.dto.req.TicketOrderItemQueryReqDTO;
 import org.opengoofy.index12306.biz.ticketservice.remote.dto.TicketOrderCreateRemoteReqDTO;
 import org.opengoofy.index12306.biz.ticketservice.remote.dto.TicketOrderDetailRespDTO;
+import org.opengoofy.index12306.biz.ticketservice.remote.dto.TicketOrderExchangeRemoteReqDTO;
 import org.opengoofy.index12306.biz.ticketservice.remote.dto.TicketOrderPassengerDetailRespDTO;
 import org.opengoofy.index12306.framework.starter.convention.result.Result;
+import org.opengoofy.index12306.framework.starter.web.Results;
 import org.springframework.cloud.openfeign.FeignClient;
 import org.springframework.cloud.openfeign.SpringQueryMap;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -63,6 +65,14 @@ public interface TicketOrderRemoteService {
      */
     @PostMapping("/api/order-service/order/ticket/create")
     Result<String> createTicketOrder(@RequestBody TicketOrderCreateRemoteReqDTO requestParam);
+
+    /**
+     * 改签
+     * @param requestParam
+     * @return
+     */
+    @PostMapping("/api/order-service/order/ticket/exchange")
+    public Result<TicketOrderDetailRespDTO> exchangeTicketOrder(@RequestBody TicketOrderExchangeRemoteReqDTO requestParam);
 
     /**
      * 车票订单关闭

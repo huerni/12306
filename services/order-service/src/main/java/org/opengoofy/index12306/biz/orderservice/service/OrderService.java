@@ -22,6 +22,7 @@ import org.opengoofy.index12306.biz.orderservice.dto.domain.TicketOrderExchangeD
 import org.opengoofy.index12306.biz.orderservice.dto.req.*;
 import org.opengoofy.index12306.biz.orderservice.dto.resp.TicketOrderDetailRespDTO;
 import org.opengoofy.index12306.biz.orderservice.dto.resp.TicketOrderDetailSelfRespDTO;
+import org.opengoofy.index12306.biz.orderservice.dto.resp.TicketOrderExchangeRespDTO;
 import org.opengoofy.index12306.biz.orderservice.mq.event.PayResultCallbackOrderEvent;
 import org.opengoofy.index12306.framework.starter.convention.page.PageResponse;
 
@@ -56,7 +57,7 @@ public interface OrderService {
      */
     String createTicketOrder(TicketOrderCreateReqDTO requestParam);
 
-    boolean exchangeTicketOrder(TicketOrderExchangeDTO requestParam);
+    TicketOrderExchangeRespDTO exchangeTicketOrder(TicketOrderExchangeDTO requestParam);
 
     /**
      * 关闭火车票订单

@@ -25,21 +25,25 @@ import org.apache.rocketmq.spring.annotation.RocketMQMessageListener;
 import org.apache.rocketmq.spring.core.RocketMQListener;
 import org.opengoofy.index12306.biz.ticketservice.common.constant.TicketRocketMQConstant;
 import org.opengoofy.index12306.biz.ticketservice.common.enums.SeatStatusEnum;
+import org.opengoofy.index12306.biz.ticketservice.common.enums.TicketStatusEnum;
 import org.opengoofy.index12306.biz.ticketservice.dao.entity.SeatDO;
 import org.opengoofy.index12306.biz.ticketservice.dao.mapper.SeatMapper;
 import org.opengoofy.index12306.biz.ticketservice.mq.domain.MessageWrapper;
 import org.opengoofy.index12306.biz.ticketservice.mq.event.PayResultCallbackTicketEvent;
 import org.opengoofy.index12306.biz.ticketservice.remote.TicketOrderRemoteService;
 import org.opengoofy.index12306.biz.ticketservice.remote.dto.TicketOrderDetailRespDTO;
+import org.opengoofy.index12306.biz.ticketservice.remote.dto.TicketOrderExchangeRemoteReqDTO;
 import org.opengoofy.index12306.biz.ticketservice.remote.dto.TicketOrderPassengerDetailRespDTO;
 import org.opengoofy.index12306.framework.starter.convention.exception.ServiceException;
 import org.opengoofy.index12306.framework.starter.convention.result.Result;
 import org.opengoofy.index12306.framework.starter.idempotent.annotation.Idempotent;
 import org.opengoofy.index12306.framework.starter.idempotent.enums.IdempotentSceneEnum;
 import org.opengoofy.index12306.framework.starter.idempotent.enums.IdempotentTypeEnum;
+import org.opengoofy.index12306.framework.starter.web.Results;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.List;
 import java.util.Objects;
 
 /**
@@ -76,6 +80,16 @@ public class PayResultCallbackTicketConsumer implements RocketMQListener<Message
             if (!ticketOrderDetailResult.isSuccess() && Objects.isNull(ticketOrderDetailResult.getData())) {
                 throw new ServiceException("支付结果回调查询订单失败");
             }
+            if(ticketOrderDetailResult.getData().getPreOrderSn() != null) {
+                TicketOrderExchangeRemoteReqDTO ticketOrderExchangeRemoteReqDTO = TicketOrderExchangeRemoteReqDTO.builder()
+                        .orderSn(message.getMessage().getOrderSn())
+                        .preOrderSn(ticketOrderDetailResult.getData().getPreOrderSn())
+                        .build();
+                ticketOrderDetailResult = ticketOrderRemoteService.exchangeTicketOrder(ticketOrderExchangeRemoteReqDTO);
+                if (!ticketOrderDetailResult.isSuccess() && Objects.isNull(ticketOrderDetailResult.getData())) {
+                    throw new ServiceException("支付结果回调查询订单失败");
+                }
+            }
         } catch (Throwable ex) {
             log.error("支付结果回调查询订单失败", ex);
             throw ex;
@@ -89,9 +103,15 @@ public class PayResultCallbackTicketConsumer implements RocketMQListener<Message
                     .eq(SeatDO::getSeatType, each.getSeatType())
                     .eq(SeatDO::getStartStation, ticketOrderDetail.getDeparture())
                     .eq(SeatDO::getEndStation, ticketOrderDetail.getArrival());
+
             SeatDO updateSeatDO = new SeatDO();
-            updateSeatDO.setSeatStatus(SeatStatusEnum.SOLD.getCode());
-            seatMapper.update(updateSeatDO, updateWrapper);
+            if (each.getStatus().equals(TicketStatusEnum.CHANGED.getCode())) {
+                updateSeatDO.setSeatStatus(SeatStatusEnum.AVAILABLE.getCode());
+                seatMapper.update(updateSeatDO, updateWrapper);
+            } else {
+                updateSeatDO.setSeatStatus(SeatStatusEnum.SOLD.getCode());
+                seatMapper.update(updateSeatDO, updateWrapper);
+            }
         }
     }
 }

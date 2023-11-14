@@ -19,6 +19,7 @@ package org.opengoofy.index12306.biz.orderservice.controller;
 
 import cn.crane4j.annotation.AutoOperate;
 import lombok.RequiredArgsConstructor;
+import org.opengoofy.index12306.biz.orderservice.dto.domain.TicketOrderExchangeDTO;
 import org.opengoofy.index12306.biz.orderservice.dto.req.CancelTicketOrderReqDTO;
 import org.opengoofy.index12306.biz.orderservice.dto.req.TicketOrderCreateReqDTO;
 import org.opengoofy.index12306.biz.orderservice.dto.req.TicketOrderItemQueryReqDTO;
@@ -26,6 +27,7 @@ import org.opengoofy.index12306.biz.orderservice.dto.req.TicketOrderPageQueryReq
 import org.opengoofy.index12306.biz.orderservice.dto.req.TicketOrderSelfPageQueryReqDTO;
 import org.opengoofy.index12306.biz.orderservice.dto.resp.TicketOrderDetailRespDTO;
 import org.opengoofy.index12306.biz.orderservice.dto.resp.TicketOrderDetailSelfRespDTO;
+import org.opengoofy.index12306.biz.orderservice.dto.resp.TicketOrderExchangeRespDTO;
 import org.opengoofy.index12306.biz.orderservice.dto.resp.TicketOrderPassengerDetailRespDTO;
 import org.opengoofy.index12306.biz.orderservice.service.OrderItemService;
 import org.opengoofy.index12306.biz.orderservice.service.OrderService;
@@ -91,6 +93,16 @@ public class TicketOrderController {
     @PostMapping("/api/order-service/order/ticket/create")
     public Result<String> createTicketOrder(@RequestBody TicketOrderCreateReqDTO requestParam) {
         return Results.success(orderService.createTicketOrder(requestParam));
+    }
+
+    /**
+     * 改签
+     * @param requestParam
+     * @return
+     */
+    @PostMapping("/api/order-service/order/ticket/exchange")
+    public Result<TicketOrderExchangeRespDTO> exchangeTicketOrder(@RequestBody TicketOrderExchangeDTO requestParam) {
+        return Results.success(orderService.exchangeTicketOrder(requestParam));
     }
 
     /**
