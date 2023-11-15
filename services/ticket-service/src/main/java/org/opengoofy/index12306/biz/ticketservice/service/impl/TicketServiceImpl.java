@@ -493,8 +493,7 @@ public class TicketServiceImpl extends ServiceImpl<TicketMapper, TicketDO> imple
         // 责任链模式  1. 参数必填 2. 是否符合改签条件(订单状态，车次是否已开)
 
         // 1. 创建新订单，进行改签
-
-        if (requestParam.getPassengers().isEmpty()) {
+        if (requestParam.getPassengers() == null || requestParam.getPassengers().isEmpty()) {
             UserQueryActualRespDTO userActualResp = userRemoteService.queryActualUserByUsername(UserContext.getUsername()).getData();
             List<PassengerRespDTO> passengers = userRemoteService.listPassengerQueryByUsername().getData();
             PurchaseTicketPassengerDetailDTO passenger = passengers.stream()

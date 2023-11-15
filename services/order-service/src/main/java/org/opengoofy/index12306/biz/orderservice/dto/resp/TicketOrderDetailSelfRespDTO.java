@@ -100,6 +100,11 @@ public class TicketOrderDetailSelfRespDTO {
     private Integer ticketType;
 
     /**
+     * 车票状态
+     */
+    private Integer status;
+
+    /**
      * 订单金额
      */
     private Integer amount;

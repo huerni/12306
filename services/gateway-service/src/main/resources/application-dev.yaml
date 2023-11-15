@@ -26,6 +26,7 @@ spring:
                   - /api/ticket-service/ticket/purchase
                   - /api/ticket-service/ticket/pay/query
                   - /api/ticket-service/ticket/cancel
+                  - /api/ticket-service/ticket/exchange
 
         - id: index12306-pay-service
           uri: lb://index12306-pay${unique-name:}-service/api/pay-service/**
