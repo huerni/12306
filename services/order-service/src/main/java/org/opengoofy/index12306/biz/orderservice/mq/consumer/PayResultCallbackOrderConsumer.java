@@ -65,29 +65,7 @@ public class PayResultCallbackOrderConsumer implements RocketMQListener<MessageW
     public void onMessage(MessageWrapper<PayResultCallbackOrderEvent> message) {
         PayResultCallbackOrderEvent payResultCallbackOrderEvent = message.getMessage();
         TicketOrderDetailRespDTO ticketOrderDetailRespDTO = orderService.queryTicketOrderByOrderSn(payResultCallbackOrderEvent.getOrderSn());
-        if(ticketOrderDetailRespDTO.getPreOrderSn() != null) {
-//            TicketOrderExchangeDTO ticketOrderExchangeDTO = TicketOrderExchangeDTO.builder()
-//                    .preOrderSn(ticketOrderDetailRespDTO.getPreOrderSn())
-//                    .orderSn(payResultCallbackOrderEvent.getOrderSn())
-//                    .build();
-//            orderService.exchangeTicketOrder(ticketOrderExchangeDTO);
-
-            OrderStatusReversalDTO orderStatusReversalDTO = OrderStatusReversalDTO.builder()
-                    .orderSn(ticketOrderDetailRespDTO.getPreOrderSn())
-                    .orderStatus(OrderStatusEnum.CLOSED.getStatus())
-                    .orderItemStatus(OrderItemStatusEnum.CLOSED.getStatus())
-                    .build();
-            orderService.statusReversal(orderStatusReversalDTO);
-            orderService.payCallbackOrder(payResultCallbackOrderEvent);
-
-            OrderStatusReversalDTO preOrderStatusReversalDTO = OrderStatusReversalDTO.builder()
-                    .orderSn(ticketOrderDetailRespDTO.getPreOrderSn())
-                    .orderStatus(OrderStatusEnum.ALREADY_PAID.getStatus())
-                    .orderItemStatus(OrderItemStatusEnum.ALREADY_PAID.getStatus())
-                    .build();
-            orderService.statusReversal(preOrderStatusReversalDTO);
-            orderService.payCallbackOrder(payResultCallbackOrderEvent);
-        } else {
+        if(ticketOrderDetailRespDTO.getPreOrderSn() == null) {
             OrderStatusReversalDTO preOrderStatusReversalDTO = OrderStatusReversalDTO.builder()
                     .orderSn(ticketOrderDetailRespDTO.getOrderSn())
                     .orderStatus(OrderStatusEnum.ALREADY_PAID.getStatus())
@@ -96,7 +74,5 @@ public class PayResultCallbackOrderConsumer implements RocketMQListener<MessageW
             orderService.statusReversal(preOrderStatusReversalDTO);
             orderService.payCallbackOrder(payResultCallbackOrderEvent);
         }
-
-
     }
 }

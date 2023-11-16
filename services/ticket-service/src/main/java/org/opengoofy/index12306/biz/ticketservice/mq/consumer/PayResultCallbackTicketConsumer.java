@@ -103,7 +103,6 @@ public class PayResultCallbackTicketConsumer implements RocketMQListener<Message
                     .eq(SeatDO::getSeatType, each.getSeatType())
                     .eq(SeatDO::getStartStation, ticketOrderDetail.getDeparture())
                     .eq(SeatDO::getEndStation, ticketOrderDetail.getArrival());
-
             SeatDO updateSeatDO = new SeatDO();
             if (each.getStatus().equals(TicketStatusEnum.CHANGED.getCode())) {
                 updateSeatDO.setSeatStatus(SeatStatusEnum.AVAILABLE.getCode());
