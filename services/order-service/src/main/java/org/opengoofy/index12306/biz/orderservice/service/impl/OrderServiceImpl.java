@@ -30,6 +30,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.apache.rocketmq.client.producer.SendResult;
 import org.apache.rocketmq.client.producer.SendStatus;
 import org.opengoofy.index12306.biz.orderservice.common.enums.OrderCanalErrorCodeEnum;
+import org.opengoofy.index12306.biz.orderservice.common.enums.OrderExchangeErrorCodeEnum;
 import org.opengoofy.index12306.biz.orderservice.common.enums.OrderItemStatusEnum;
 import org.opengoofy.index12306.biz.orderservice.common.enums.OrderStatusEnum;
 import org.opengoofy.index12306.biz.orderservice.dao.entity.OrderDO;
@@ -202,9 +203,9 @@ public class OrderServiceImpl implements OrderService {
                 .eq(OrderDO::getOrderSn, requestParam.getPreOrderSn());
         OrderDO preOrderDO = orderMapper.selectOne(preQueryWrapper);
         if (orderDO == null || preOrderDO == null) {
-            throw new ServiceException(OrderCanalErrorCodeEnum.ORDER_CANAL_UNKNOWN_ERROR);
+            throw new ServiceException(OrderExchangeErrorCodeEnum.ORDER_EXCHANGE_UNKNOWN_ERROR);
         } else if (orderDO.getStatus() != OrderStatusEnum.PENDING_PAYMENT.getStatus() && preOrderDO.getStatus() != OrderStatusEnum.ALREADY_PAID.getStatus()) {
-            throw new ServiceException(OrderCanalErrorCodeEnum.ORDER_CANAL_STATUS_ERROR);
+            throw new ServiceException(OrderExchangeErrorCodeEnum.ORDER_EXCHANGE_STATUS_ERROR);
         }
 
         // 改变订单状态

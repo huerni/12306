@@ -124,6 +124,7 @@ public class TicketServiceImpl extends ServiceImpl<TicketMapper, TicketDO> imple
     private final SeatMarginCacheLoader seatMarginCacheLoader;
     private final AbstractChainContext<TicketPageQueryReqDTO> ticketPageQueryAbstractChainContext;
     private final AbstractChainContext<PurchaseTicketReqDTO> purchaseTicketAbstractChainContext;
+    private final AbstractChainContext<ExchangeTicketReqDTO> exchangeTicketReqDTOAbstractChainContext;
     private final AbstractChainContext<RefundTicketReqDTO> refundReqDTOAbstractChainContext;
     private final RedissonClient redissonClient;
     private final ConfigurableEnvironment environment;
@@ -491,7 +492,7 @@ public class TicketServiceImpl extends ServiceImpl<TicketMapper, TicketDO> imple
     @Override
     public ExchangeTicketRespDTO exchangeTickets(@RequestBody ExchangeTicketReqDTO requestParam) {
         // 责任链模式  1. 参数必填 2. 是否符合改签条件(订单状态，车次是否已开)
-
+        exchangeTicketReqDTOAbstractChainContext.handler(TicketChainMarkEnum.TRAIN_EXCHANGE_TICKET_FILTER.name(), requestParam);
         // 1. 创建新订单，进行改签
         if (requestParam.getPassengers() == null || requestParam.getPassengers().isEmpty()) {
             UserQueryActualRespDTO userActualResp = userRemoteService.queryActualUserByUsername(UserContext.getUsername()).getData();
