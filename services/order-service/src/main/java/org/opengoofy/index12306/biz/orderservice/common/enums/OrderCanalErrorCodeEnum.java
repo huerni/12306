@@ -42,6 +42,7 @@ public enum OrderCanalErrorCodeEnum implements IErrorCode {
 
     ORDER_ITEM_STATUS_REVERSAL_ERROR("B006007", "子订单状态反转失败，请稍后再试");
 
+
     /**
      * 错误码
      */

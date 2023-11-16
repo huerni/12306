@@ -17,29 +17,15 @@
 
 package org.opengoofy.index12306.biz.ticketservice.remote.dto;
 
-import lombok.AllArgsConstructor;
-import lombok.Builder;
 import lombok.Data;
-import lombok.NoArgsConstructor;
-
-import java.util.Date;
-import java.util.List;
 
 /**
- * 车票订单创建请求参数
+ * 用户查询返回无脱敏参数
  *
  * @公众号：马丁玩编程，回复：加群，添加马哥微信（备注：12306）获取项目资料
  */
 @Data
-@NoArgsConstructor
-@AllArgsConstructor
-@Builder
-public class TicketOrderCreateRemoteReqDTO {
-
-    /**
-     * 用户 ID
-     */
-    private String userId;
+public class UserQueryActualRespDTO {
 
     /**
      * 用户名
@@ -47,57 +33,57 @@ public class TicketOrderCreateRemoteReqDTO {
     private String username;
 
     /**
-     * 车次 ID
+     * 真实姓名
      */
-    private Long trainId;
+    private String realName;
 
     /**
-     * 出发站点
+     * 国家/地区
      */
-    private String departure;
+    private String region;
 
     /**
-     * 到达站点
+     * 证件类型
      */
-    private String arrival;
+    private Integer idType;
 
     /**
-     * 订单来源
+     * 证件号
      */
-    private Integer source;
+    private String idCard;
 
     /**
-     * 原订单号
+     * 手机号
      */
-    private String preOrderSn;
+    private String phone;
 
     /**
-     * 下单时间
+     * 固定电话
      */
-    private Date orderTime;
+    private String telephone;
 
     /**
-     * 乘车日期
+     * 邮箱
      */
-    private Date ridingDate;
+    private String mail;
 
     /**
-     * 列车车次
+     * 旅客类型
      */
-    private String trainNumber;
+    private Integer userType;
 
     /**
-     * 出发时间
+     * 审核状态
      */
-    private Date departureTime;
+    private Integer verifyStatus;
 
     /**
-     * 到达时间
+     * 邮编
      */
-    private Date arrivalTime;
+    private String postCode;
 
     /**
-     * 订单明细
+     * 地址
      */
-    private List<TicketOrderItemCreateRemoteReqDTO> ticketOrderItems;
+    private String address;
 }

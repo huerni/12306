@@ -46,7 +46,7 @@ public enum TicketStatusEnum {
     /**
      * 改签
      */
-    CHANGED(3),
+    CHANGED(50),
 
     /**
      * 退票

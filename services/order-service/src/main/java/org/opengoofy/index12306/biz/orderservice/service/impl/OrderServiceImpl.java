@@ -24,26 +24,27 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.rocketmq.client.producer.SendResult;
 import org.apache.rocketmq.client.producer.SendStatus;
 import org.opengoofy.index12306.biz.orderservice.common.enums.OrderCanalErrorCodeEnum;
+import org.opengoofy.index12306.biz.orderservice.common.enums.OrderExchangeErrorCodeEnum;
 import org.opengoofy.index12306.biz.orderservice.common.enums.OrderItemStatusEnum;
 import org.opengoofy.index12306.biz.orderservice.common.enums.OrderStatusEnum;
 import org.opengoofy.index12306.biz.orderservice.dao.entity.OrderDO;
 import org.opengoofy.index12306.biz.orderservice.dao.entity.OrderItemDO;
 import org.opengoofy.index12306.biz.orderservice.dao.entity.OrderItemPassengerDO;
 import org.opengoofy.index12306.biz.orderservice.dao.mapper.OrderItemMapper;
+import org.opengoofy.index12306.biz.orderservice.dao.mapper.OrderItemPassengerMapper;
 import org.opengoofy.index12306.biz.orderservice.dao.mapper.OrderMapper;
 import org.opengoofy.index12306.biz.orderservice.dto.domain.OrderStatusReversalDTO;
-import org.opengoofy.index12306.biz.orderservice.dto.req.CancelTicketOrderReqDTO;
-import org.opengoofy.index12306.biz.orderservice.dto.req.TicketOrderCreateReqDTO;
-import org.opengoofy.index12306.biz.orderservice.dto.req.TicketOrderItemCreateReqDTO;
-import org.opengoofy.index12306.biz.orderservice.dto.req.TicketOrderPageQueryReqDTO;
-import org.opengoofy.index12306.biz.orderservice.dto.req.TicketOrderSelfPageQueryReqDTO;
+import org.opengoofy.index12306.biz.orderservice.dto.domain.TicketOrderExchangeDTO;
+import org.opengoofy.index12306.biz.orderservice.dto.req.*;
 import org.opengoofy.index12306.biz.orderservice.dto.resp.TicketOrderDetailRespDTO;
 import org.opengoofy.index12306.biz.orderservice.dto.resp.TicketOrderDetailSelfRespDTO;
+import org.opengoofy.index12306.biz.orderservice.dto.resp.TicketOrderExchangeRespDTO;
 import org.opengoofy.index12306.biz.orderservice.dto.resp.TicketOrderPassengerDetailRespDTO;
 import org.opengoofy.index12306.biz.orderservice.mq.event.DelayCloseOrderEvent;
 import org.opengoofy.index12306.biz.orderservice.mq.event.PayResultCallbackOrderEvent;
@@ -69,6 +70,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
+import java.util.stream.Collectors;
 
 /**
  * 订单服务接口层实现
@@ -83,6 +85,7 @@ public class OrderServiceImpl implements OrderService {
     private final OrderMapper orderMapper;
     private final OrderItemMapper orderItemMapper;
     private final OrderItemService orderItemService;
+    private final OrderItemPassengerMapper orderItemPassengerMapper;
     private final OrderPassengerRelationService orderPassengerRelationService;
     private final RedissonClient redissonClient;
     private final DelayCloseOrderSendProduce delayCloseOrderSendProduce;
@@ -133,6 +136,7 @@ public class OrderServiceImpl implements OrderService {
                 .arrival(requestParam.getArrival())
                 .trainId(requestParam.getTrainId())
                 .source(requestParam.getSource())
+                .preOrderSn(requestParam.getPreOrderSn())
                 .status(OrderStatusEnum.PENDING_PAYMENT.getStatus())
                 .username(requestParam.getUsername())
                 .userId(String.valueOf(requestParam.getUserId()))
@@ -186,6 +190,162 @@ public class OrderServiceImpl implements OrderService {
             throw ex;
         }
         return orderSn;
+    }
+
+    @Transactional(rollbackFor = Exception.class)
+    @Override
+    public TicketOrderExchangeRespDTO exchangeTicketOrder(TicketOrderExchangeDTO requestParam) {
+        // 关闭该订单，将item转为原订单，且将原订单的item设为已改签
+        LambdaQueryWrapper<OrderDO> queryWrapper = Wrappers.lambdaQuery(OrderDO.class)
+                .eq(OrderDO::getOrderSn, requestParam.getOrderSn());
+        OrderDO orderDO = orderMapper.selectOne(queryWrapper);
+        LambdaQueryWrapper<OrderDO> preQueryWrapper = Wrappers.lambdaQuery(OrderDO.class)
+                .eq(OrderDO::getOrderSn, requestParam.getPreOrderSn());
+        OrderDO preOrderDO = orderMapper.selectOne(preQueryWrapper);
+        if (orderDO == null || preOrderDO == null) {
+            throw new ServiceException(OrderExchangeErrorCodeEnum.ORDER_EXCHANGE_UNKNOWN_ERROR);
+        } else if (orderDO.getStatus() != OrderStatusEnum.PENDING_PAYMENT.getStatus() && preOrderDO.getStatus() != OrderStatusEnum.ALREADY_PAID.getStatus()) {
+            throw new ServiceException(OrderExchangeErrorCodeEnum.ORDER_EXCHANGE_STATUS_ERROR);
+        }
+
+        // 改变订单状态
+        OrderStatusReversalDTO orderStatusReversalDTO = OrderStatusReversalDTO.builder()
+                .orderSn(requestParam.getOrderSn())
+                .orderStatus(OrderStatusEnum.CLOSED.getStatus())
+                .orderItemStatus(OrderItemStatusEnum.CLOSED.getStatus())
+                .build();
+        statusReversal(orderStatusReversalDTO);
+
+        // 更改子订单
+        // 现
+        LambdaQueryWrapper<OrderItemDO> orderItemDOLambdaQueryWrapper = Wrappers.lambdaQuery(OrderItemDO.class)
+                .eq(OrderItemDO::getOrderSn, requestParam.getOrderSn());
+        List<OrderItemDO> orderItemDOs = orderItemMapper.selectList(orderItemDOLambdaQueryWrapper);
+        // 原
+        LambdaQueryWrapper<OrderItemDO> orderItemDOLambdaQueryWrapper1 = Wrappers.lambdaQuery(OrderItemDO.class)
+                .eq(OrderItemDO::getOrderSn, requestParam.getPreOrderSn());
+        List<OrderItemDO> preOrderItemDOs = orderItemMapper.selectList(orderItemDOLambdaQueryWrapper1);
+
+        ArrayList<TicketOrderPassengerDetailRespDTO> ticketOrderPassengerDetailRespDTOS = new ArrayList<>();
+        // 修改状态为已改签
+        List<String> orderItemDOIDs = orderItemDOs.stream()
+                .map(OrderItemDO::getIdCard)
+                .toList();
+        preOrderItemDOs.forEach(each -> {
+            if (orderItemDOIDs.contains(each.getIdCard())) {
+                LambdaQueryWrapper<OrderItemDO> orderItemDOLambdaQueryWrapper2 = Wrappers.lambdaQuery(OrderItemDO.class)
+                        .eq(OrderItemDO::getOrderSn, requestParam.getPreOrderSn())
+                        .eq(OrderItemDO::getIdType, each.getIdType())
+                        .eq(OrderItemDO::getIdCard, each.getIdCard())
+                        .eq(OrderItemDO::getId, each.getId());
+                OrderItemDO orderItemDO = new OrderItemDO();
+                orderItemDO.setStatus(OrderItemStatusEnum.RESCHEDULED.getStatus());
+                orderItemMapper.update(orderItemDO, orderItemDOLambdaQueryWrapper2);
+                // 封装返回结果
+                TicketOrderPassengerDetailRespDTO ticketOrderPassengerDetailRespDTO = TicketOrderPassengerDetailRespDTO.builder()
+                        .ticketType(each.getTicketType())
+                        .amount(each.getAmount())
+                        .carriageNumber(each.getCarriageNumber())
+                        .status(each.getStatus())
+                        .idCard(each.getIdCard())
+                        .userId(each.getUserId())
+                        .idType(each.getIdType())
+                        .username(each.getUsername())
+                        .realName(each.getRealName())
+                        .statusName(each.getRealName())
+                        .seatNumber(each.getSeatNumber())
+                        .seatType(each.getSeatType())
+                        .build();
+                ticketOrderPassengerDetailRespDTOS.add(ticketOrderPassengerDetailRespDTO);
+            }
+        });
+
+        // 增加新子订单
+        List<OrderItemDO> orderItemDOList = new ArrayList<>();
+        orderItemDOs.forEach(each -> {
+            OrderItemDO orderItemDO = OrderItemDO.builder()
+                    .trainId(each.getTrainId())
+                    .seatNumber(each.getSeatNumber())
+                    .carriageNumber(each.getCarriageNumber())
+                    .realName(each.getRealName())
+                    .orderSn(requestParam.getPreOrderSn())
+                    .phone(each.getPhone())
+                    .seatType(each.getSeatType())
+                    .username(each.getUsername())
+                    .amount(each.getAmount())
+                    .carriageNumber(each.getCarriageNumber())
+                    .idCard(each.getIdCard())
+                    .ticketType(each.getTicketType())
+                    .idType(each.getIdType())
+                    .userId(each.getUserId())
+                    .status(OrderItemStatusEnum.ALREADY_PAID.getStatus())
+                    .build();
+            orderItemDOList.add(orderItemDO);
+            LambdaQueryWrapper<OrderItemPassengerDO> orderItemPassengerDOLambdaQueryWrapper = Wrappers.lambdaQuery(OrderItemPassengerDO.class)
+                    .eq(OrderItemPassengerDO::getId, each.getId())
+                    .eq(OrderItemPassengerDO::getIdType, each.getIdType())
+                    .eq(OrderItemPassengerDO::getIdCard, each.getIdCard());
+            OrderItemPassengerDO orderPassengerRelationDO = new OrderItemPassengerDO();
+            orderPassengerRelationDO.setOrderSn(requestParam.getPreOrderSn());
+            orderItemPassengerMapper.update(orderPassengerRelationDO, orderItemPassengerDOLambdaQueryWrapper);
+        });
+        orderItemService.saveBatch(orderItemDOList);
+
+
+        // 封装返回结果
+
+        orderItemDOList.forEach(each -> {
+            TicketOrderPassengerDetailRespDTO ticketOrderPassengerDetailRespDTO = TicketOrderPassengerDetailRespDTO.builder()
+                    .ticketType(each.getTicketType())
+                    .amount(each.getAmount())
+                    .carriageNumber(each.getCarriageNumber())
+                    .status(each.getStatus())
+                    .idCard(each.getIdCard())
+                    .userId(each.getUserId())
+                    .idType(each.getIdType())
+                    .username(each.getUsername())
+                    .realName(each.getRealName())
+                    .statusName(each.getRealName())
+                    .seatNumber(each.getSeatNumber())
+                    .seatType(each.getSeatType())
+                    .build();
+            ticketOrderPassengerDetailRespDTOS.add(ticketOrderPassengerDetailRespDTO);
+        });
+
+        // 所有子订单都改签，更新订单信息
+        if (orderItemDOList.size() == orderItemDOs.size()) {
+            OrderDO updatePreOrder = new OrderDO();
+            updatePreOrder.setArrival(orderDO.getArrival());
+            updatePreOrder.setDeparture(orderDO.getDeparture());
+            updatePreOrder.setTrainId(orderDO.getTrainId());
+            updatePreOrder.setTrainNumber(orderDO.getTrainNumber());
+            updatePreOrder.setArrivalTime(orderDO.getArrivalTime());
+            updatePreOrder.setDepartureTime(orderDO.getDepartureTime());
+            updatePreOrder.setRidingDate(orderDO.getRidingDate());
+            LambdaUpdateWrapper<OrderDO> updateWrapper = Wrappers.lambdaUpdate(OrderDO.class)
+                    .eq(OrderDO::getOrderSn, requestParam.getPreOrderSn());
+            orderMapper.update(updatePreOrder, updateWrapper);
+
+
+            TicketOrderExchangeRespDTO ticketOrderExchangeRespDTO = TicketOrderExchangeRespDTO.builder()
+                    .trainId(orderDO.getTrainId())
+                    .arrival(orderDO.getArrival())
+                    .departure(orderDO.getDeparture())
+                    .trainNumber(orderDO.getTrainNumber())
+                    .passengerDetails(ticketOrderPassengerDetailRespDTOS)
+                    .build();
+            return ticketOrderExchangeRespDTO;
+        }
+
+        TicketOrderExchangeRespDTO ticketOrderExchangeRespDTO = TicketOrderExchangeRespDTO.builder()
+                .trainId(preOrderDO.getTrainId())
+                .arrival(preOrderDO.getArrival())
+                .departure(preOrderDO.getDeparture())
+                .trainNumber(preOrderDO.getTrainNumber())
+                .passengerDetails(ticketOrderPassengerDetailRespDTOS)
+                .build();
+
+        return ticketOrderExchangeRespDTO;
     }
 
     @Override
@@ -249,9 +409,10 @@ public class OrderServiceImpl implements OrderService {
         OrderDO orderDO = orderMapper.selectOne(queryWrapper);
         if (orderDO == null) {
             throw new ServiceException(OrderCanalErrorCodeEnum.ORDER_CANAL_UNKNOWN_ERROR);
-        } else if (orderDO.getStatus() != OrderStatusEnum.PENDING_PAYMENT.getStatus()) {
-            throw new ServiceException(OrderCanalErrorCodeEnum.ORDER_CANAL_STATUS_ERROR);
         }
+//        else if (orderDO.getStatus() != OrderStatusEnum.PENDING_PAYMENT.getStatus()) {
+//            throw new ServiceException(OrderCanalErrorCodeEnum.ORDER_CANAL_STATUS_ERROR);
+//        }
         RLock lock = redissonClient.getLock(StrBuilder.create("order:status-reversal:order_sn_").append(requestParam.getOrderSn()).toString());
         if (!lock.tryLock()) {
             log.warn("订单重复修改状态，状态反转请求参数：{}", JSON.toJSONString(requestParam));
@@ -298,18 +459,29 @@ public class OrderServiceImpl implements OrderService {
                 .eq(OrderItemPassengerDO::getIdCard, userActualResp.getData().getIdCard())
                 .orderByDesc(OrderItemPassengerDO::getCreateTime);
         IPage<OrderItemPassengerDO> orderItemPassengerPage = orderPassengerRelationService.page(PageUtil.convert(requestParam), queryWrapper);
-        return PageUtil.convert(orderItemPassengerPage, each -> {
+        IPage<TicketOrderDetailSelfRespDTO> actualResult = new Page<>();
+        actualResult.setSize(orderItemPassengerPage.getSize());
+        actualResult.setCurrent(orderItemPassengerPage.getCurrent());
+        actualResult.setRecords(new ArrayList<>());
+        orderItemPassengerPage.getRecords().forEach(each -> {
             LambdaQueryWrapper<OrderDO> orderQueryWrapper = Wrappers.lambdaQuery(OrderDO.class)
-                    .eq(OrderDO::getOrderSn, each.getOrderSn());
+                    .eq(OrderDO::getOrderSn, each.getOrderSn())
+                    .ne(OrderDO::getStatus, OrderStatusEnum.CLOSED.getStatus());
             OrderDO orderDO = orderMapper.selectOne(orderQueryWrapper);
-            LambdaQueryWrapper<OrderItemDO> orderItemQueryWrapper = Wrappers.lambdaQuery(OrderItemDO.class)
-                    .eq(OrderItemDO::getOrderSn, each.getOrderSn())
-                    .eq(OrderItemDO::getIdCard, each.getIdCard());
-            OrderItemDO orderItemDO = orderItemMapper.selectOne(orderItemQueryWrapper);
-            TicketOrderDetailSelfRespDTO actualResult = BeanUtil.convert(orderDO, TicketOrderDetailSelfRespDTO.class);
-            BeanUtil.convertIgnoreNullAndBlank(orderItemDO, actualResult);
-            return actualResult;
+            if(orderDO != null) {
+                LambdaQueryWrapper<OrderItemDO> orderItemQueryWrapper = Wrappers.lambdaQuery(OrderItemDO.class)
+                        .eq(OrderItemDO::getOrderSn, each.getOrderSn())
+                        .eq(OrderItemDO::getIdCard, each.getIdCard());
+                List<OrderItemDO> orderItemDO = orderItemMapper.selectList(orderItemQueryWrapper);
+                orderItemDO.forEach(it -> {
+                    TicketOrderDetailSelfRespDTO ticketOrderDetailSelfRespDTO = BeanUtil.convert(orderDO, TicketOrderDetailSelfRespDTO.class);
+                    BeanUtil.convertIgnoreNullAndBlank(it, ticketOrderDetailSelfRespDTO);
+                    actualResult.getRecords().add(ticketOrderDetailSelfRespDTO);
+                });
+            }
         });
+        actualResult.setTotal(actualResult.getRecords().size());
+        return PageUtil.convert(actualResult);
     }
 
     private List<Integer> buildOrderStatusList(TicketOrderPageQueryReqDTO requestParam) {

@@ -37,5 +37,10 @@ public enum TicketChainMarkEnum {
     /**
      * 车票退款过滤器
      */
-    TRAIN_REFUND_TICKET_FILTER
+    TRAIN_REFUND_TICKET_FILTER,
+
+    /**
+     * 改签过滤器
+     */
+    TRAIN_EXCHANGE_TICKET_FILTER
 }

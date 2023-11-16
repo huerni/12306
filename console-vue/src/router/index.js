@@ -13,6 +13,7 @@ import AliPay from '../views/ali-pay'
 import TikectList from '../views/order-list'
 import PersonalTicket from '../views/personalTicket'
 import PaySuccess from '../views/pay-success'
+import ExchangeTicketSearch from '../views/exchange-ticket-search'
 import Cookies from 'js-cookie'
 const routes = [
   {
@@ -39,6 +40,14 @@ const routes = [
     component: TicketSearch,
     icon: 'icon-chaxun',
     meta: { requiresAuth: false }
+  },
+  {
+    label: '车票改签',
+    path: '/exchangeTicketSearch',
+    name: 'exchangeTicketSearch',
+    component: ExchangeTicketSearch,
+    icon: 'icon-chaxun',
+    meta: {requiresAuth: true }
   },
   {
     label: '用户信息',
@@ -96,6 +105,14 @@ const routes = [
     icon: 'icon-goumai',
     meta: { requiresAuth: true }
   },
+  // {
+  //   label: '改签',
+  //   path: '/exchangeTicket',
+  //   name: 'exchangeTicket',
+  //   component: ExchangeTicket,
+  //   icon: 'icon-goumai',
+  //   meta: { requiresAuth: true }
+  // },
   {
     label: '支付宝支付',
     path: '/aliPay',

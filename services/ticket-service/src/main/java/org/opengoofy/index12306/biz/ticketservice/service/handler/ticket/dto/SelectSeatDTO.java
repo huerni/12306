@@ -22,6 +22,7 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import org.opengoofy.index12306.biz.ticketservice.dto.domain.PurchaseTicketPassengerDetailDTO;
+import org.opengoofy.index12306.biz.ticketservice.dto.domain.TicketSelectSeatDTO;
 import org.opengoofy.index12306.biz.ticketservice.dto.req.PurchaseTicketReqDTO;
 
 import java.util.List;
@@ -50,5 +51,5 @@ public final class SelectSeatDTO {
     /**
      * 购票原始入参
      */
-    private PurchaseTicketReqDTO requestParam;
+    private TicketSelectSeatDTO requestParam;
 }

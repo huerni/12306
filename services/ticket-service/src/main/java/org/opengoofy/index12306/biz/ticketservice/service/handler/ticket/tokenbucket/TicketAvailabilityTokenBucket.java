@@ -31,6 +31,7 @@ import org.opengoofy.index12306.biz.ticketservice.dao.mapper.TrainMapper;
 import org.opengoofy.index12306.biz.ticketservice.dto.domain.PurchaseTicketPassengerDetailDTO;
 import org.opengoofy.index12306.biz.ticketservice.dto.domain.RouteDTO;
 import org.opengoofy.index12306.biz.ticketservice.dto.domain.SeatTypeCountDTO;
+import org.opengoofy.index12306.biz.ticketservice.dto.req.ExchangeTicketReqDTO;
 import org.opengoofy.index12306.biz.ticketservice.dto.req.PurchaseTicketReqDTO;
 import org.opengoofy.index12306.biz.ticketservice.remote.dto.TicketOrderDetailRespDTO;
 import org.opengoofy.index12306.biz.ticketservice.remote.dto.TicketOrderPassengerDetailRespDTO;
@@ -87,6 +88,63 @@ public final class TicketAvailabilityTokenBucket {
      * @return 是否获取列车车票余量令牌桶中的令牌，{@link Boolean#TRUE} or {@link Boolean#FALSE}
      */
     public boolean takeTokenFromBucket(PurchaseTicketReqDTO requestParam) {
+        TrainDO trainDO = distributedCache.safeGet(
+                TRAIN_INFO + requestParam.getTrainId(),
+                TrainDO.class,
+                () -> trainMapper.selectById(requestParam.getTrainId()),
+                ADVANCE_TICKET_DAY,
+                TimeUnit.DAYS);
+        List<RouteDTO> routeDTOList = trainStationService
+                .listTrainStationRoute(requestParam.getTrainId(), trainDO.getStartStation(), trainDO.getEndStation());
+        StringRedisTemplate stringRedisTemplate = (StringRedisTemplate) distributedCache.getInstance();
+        String actualHashKey = TICKET_AVAILABILITY_TOKEN_BUCKET + requestParam.getTrainId();
+        Boolean hasKey = distributedCache.hasKey(actualHashKey);
+        if (!hasKey) {
+            RLock lock = redissonClient.getLock(String.format(LOCK_TICKET_AVAILABILITY_TOKEN_BUCKET, requestParam.getTrainId()));
+            lock.lock();
+            try {
+                Boolean hasKeyTwo = distributedCache.hasKey(actualHashKey);
+                if (!hasKeyTwo) {
+                    List<Integer> seatTypes = VehicleTypeEnum.findSeatTypesByCode(trainDO.getTrainType());
+                    Map<String, String> ticketAvailabilityTokenMap = new HashMap<>();
+                    for (RouteDTO each : routeDTOList) {
+                        List<SeatTypeCountDTO> seatTypeCountDTOList = seatMapper.listSeatTypeCount(Long.parseLong(requestParam.getTrainId()), each.getStartStation(), each.getEndStation(), seatTypes);
+                        for (SeatTypeCountDTO eachSeatTypeCountDTO : seatTypeCountDTOList) {
+                            String buildCacheKey = StrUtil.join("_", each.getStartStation(), each.getEndStation(), eachSeatTypeCountDTO.getSeatType());
+                            ticketAvailabilityTokenMap.put(buildCacheKey, String.valueOf(eachSeatTypeCountDTO.getSeatCount()));
+                        }
+                    }
+                    stringRedisTemplate.opsForHash().putAll(TICKET_AVAILABILITY_TOKEN_BUCKET + requestParam.getTrainId(), ticketAvailabilityTokenMap);
+                }
+            } finally {
+                lock.unlock();
+            }
+        }
+        DefaultRedisScript<Long> actual = Singleton.get(LUA_TICKET_AVAILABILITY_TOKEN_BUCKET_PATH, () -> {
+            DefaultRedisScript<Long> redisScript = new DefaultRedisScript<>();
+            redisScript.setScriptSource(new ResourceScriptSource(new ClassPathResource(LUA_TICKET_AVAILABILITY_TOKEN_BUCKET_PATH)));
+            redisScript.setResultType(Long.class);
+            return redisScript;
+        });
+        Assert.notNull(actual);
+        Map<Integer, Long> seatTypeCountMap = requestParam.getPassengers().stream()
+                .collect(Collectors.groupingBy(PurchaseTicketPassengerDetailDTO::getSeatType, Collectors.counting()));
+        JSONArray seatTypeCountArray = seatTypeCountMap.entrySet().stream()
+                .map(entry -> {
+                    JSONObject jsonObject = new JSONObject();
+                    jsonObject.put("seatType", String.valueOf(entry.getKey()));
+                    jsonObject.put("count", String.valueOf(entry.getValue()));
+                    return jsonObject;
+                })
+                .collect(Collectors.toCollection(JSONArray::new));
+        List<RouteDTO> takeoutRouteDTOList = trainStationService
+                .listTakeoutTrainStationRoute(requestParam.getTrainId(), requestParam.getDeparture(), requestParam.getArrival());
+        String luaScriptKey = StrUtil.join("_", requestParam.getDeparture(), requestParam.getArrival());
+        Long result = stringRedisTemplate.execute(actual, Lists.newArrayList(actualHashKey, luaScriptKey), JSON.toJSONString(seatTypeCountArray), JSON.toJSONString(takeoutRouteDTOList));
+        return result != null && Objects.equals(result, 0L);
+    }
+
+    public boolean takeTokenFromBucketWithExchange(ExchangeTicketReqDTO requestParam) {
         TrainDO trainDO = distributedCache.safeGet(
                 TRAIN_INFO + requestParam.getTrainId(),
                 TrainDO.class,

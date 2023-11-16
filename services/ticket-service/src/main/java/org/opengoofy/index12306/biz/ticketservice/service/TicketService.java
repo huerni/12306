@@ -19,10 +19,8 @@ package org.opengoofy.index12306.biz.ticketservice.service;
 
 import com.baomidou.mybatisplus.extension.service.IService;
 import org.opengoofy.index12306.biz.ticketservice.dao.entity.TicketDO;
-import org.opengoofy.index12306.biz.ticketservice.dto.req.CancelTicketOrderReqDTO;
-import org.opengoofy.index12306.biz.ticketservice.dto.req.PurchaseTicketReqDTO;
-import org.opengoofy.index12306.biz.ticketservice.dto.req.RefundTicketReqDTO;
-import org.opengoofy.index12306.biz.ticketservice.dto.req.TicketPageQueryReqDTO;
+import org.opengoofy.index12306.biz.ticketservice.dto.req.*;
+import org.opengoofy.index12306.biz.ticketservice.dto.resp.ExchangeTicketRespDTO;
 import org.opengoofy.index12306.biz.ticketservice.dto.resp.RefundTicketRespDTO;
 import org.opengoofy.index12306.biz.ticketservice.dto.resp.TicketPageQueryRespDTO;
 import org.opengoofy.index12306.biz.ticketservice.dto.resp.TicketPurchaseRespDTO;
@@ -84,6 +82,15 @@ public interface TicketService extends IService<TicketDO> {
      * @return 支付单详情
      */
     PayInfoRespDTO getPayInfo(String orderSn);
+
+    ExchangeTicketRespDTO exchangeTickets(@RequestBody ExchangeTicketReqDTO requestParam);
+
+    /**
+     * 车票改签
+     * @param requestParam
+     * @return
+     */
+    ExchangeTicketRespDTO executeExchangeTickets(@RequestBody ExchangeTicketReqDTO requestParam);
 
     /**
      * 取消车票订单

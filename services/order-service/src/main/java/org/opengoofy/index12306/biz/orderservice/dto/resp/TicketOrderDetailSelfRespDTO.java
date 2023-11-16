@@ -37,6 +37,11 @@ import java.util.Date;
 public class TicketOrderDetailSelfRespDTO {
 
     /**
+     * 所属订单号
+     */
+    private String OrderSn;
+
+    /**
      * 出发站点
      */
     private String departure;
@@ -93,6 +98,11 @@ public class TicketOrderDetailSelfRespDTO {
      * 车票类型 0：成人 1：儿童 2：学生 3：残疾军人
      */
     private Integer ticketType;
+
+    /**
+     * 车票状态
+     */
+    private Integer status;
 
     /**
      * 订单金额

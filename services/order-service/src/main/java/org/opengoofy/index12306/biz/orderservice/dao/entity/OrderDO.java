@@ -84,6 +84,11 @@ public class OrderDO extends BaseDO {
     private Integer source;
 
     /**
+     * 原改签订单号
+     */
+    private String preOrderSn;
+
+    /**
      * 订单状态
      */
     private Integer status;

@@ -17,7 +17,9 @@
 
 package org.opengoofy.index12306.biz.ticketservice.remote;
 
+import jakarta.validation.constraints.NotEmpty;
 import org.opengoofy.index12306.biz.ticketservice.remote.dto.PassengerRespDTO;
+import org.opengoofy.index12306.biz.ticketservice.remote.dto.UserQueryActualRespDTO;
 import org.opengoofy.index12306.framework.starter.convention.result.Result;
 import org.springframework.cloud.openfeign.FeignClient;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -38,4 +40,13 @@ public interface UserRemoteService {
      */
     @GetMapping("/api/user-service/inner/passenger/actual/query/ids")
     Result<List<PassengerRespDTO>> listPassengerQueryByIds(@RequestParam("username") String username, @RequestParam("ids") List<String> ids);
+
+    /**
+     * 根据用户名查询自身信息
+     */
+    @GetMapping("/api/user-service/actual/query")
+    Result<UserQueryActualRespDTO> queryActualUserByUsername(@RequestParam("username") @NotEmpty String username);
+
+    @GetMapping("/api/user-service/passenger/query")
+    Result<List<PassengerRespDTO>> listPassengerQueryByUsername();
 }

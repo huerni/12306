@@ -18,10 +18,8 @@
 package org.opengoofy.index12306.biz.ticketservice.controller;
 
 import lombok.RequiredArgsConstructor;
-import org.opengoofy.index12306.biz.ticketservice.dto.req.CancelTicketOrderReqDTO;
-import org.opengoofy.index12306.biz.ticketservice.dto.req.PurchaseTicketReqDTO;
-import org.opengoofy.index12306.biz.ticketservice.dto.req.RefundTicketReqDTO;
-import org.opengoofy.index12306.biz.ticketservice.dto.req.TicketPageQueryReqDTO;
+import org.opengoofy.index12306.biz.ticketservice.dto.req.*;
+import org.opengoofy.index12306.biz.ticketservice.dto.resp.ExchangeTicketRespDTO;
 import org.opengoofy.index12306.biz.ticketservice.dto.resp.RefundTicketRespDTO;
 import org.opengoofy.index12306.biz.ticketservice.dto.resp.TicketPageQueryRespDTO;
 import org.opengoofy.index12306.biz.ticketservice.dto.resp.TicketPurchaseRespDTO;
@@ -92,6 +90,26 @@ public class TicketController {
     @PostMapping("/api/ticket-service/ticket/purchase/v2")
     public Result<TicketPurchaseRespDTO> purchaseTicketsV2(@RequestBody PurchaseTicketReqDTO requestParam) {
         return Results.success(ticketService.purchaseTicketsV2(requestParam));
+    }
+
+    /**
+     * 车票改签
+     * @param requestParam
+     * @return
+     */
+    @ILog
+    @Idempotent(
+            uniqueKeyPrefix = "index12306-ticket:lock_purchase-tickets:",
+            key = "T(org.opengoofy.index12306.framework.starter.bases.ApplicationContextHolder).getBean('environment').getProperty('unique-name', '')"
+                    + "+'_'+"
+                    + "T(org.opengoofy.index12306.frameworks.starter.user.core.UserContext).getUsername()",
+            message = "正在执行改签流程，请稍后...",
+            scene = IdempotentSceneEnum.RESTAPI,
+            type = IdempotentTypeEnum.SPEL
+    )
+    @PostMapping("/api/ticket-service/ticket/exchange")
+    public Result<ExchangeTicketRespDTO> exchangeTicket(@RequestBody ExchangeTicketReqDTO requestParam) {
+        return Results.success(ticketService.exchangeTickets(requestParam));
     }
 
     /**
